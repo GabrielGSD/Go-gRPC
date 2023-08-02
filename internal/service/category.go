@@ -20,7 +20,7 @@ func NewCategoryService(categoryDb database.Category) *CategoryService {
 
 // ctx -> contexto, dados de Header, autenticação, etc
 // in -> entrada, request que estamos recebendo
-func (c *CategoryService) Create(ctx context.Context, in *pb.CreateCategoryRequest) (*pb.CategoryResponse, error) {
+func (c *CategoryService) Create(ctx context.Context, in *pb.CreateCategoryRequest) (*pb.Category, error) {
 	category, err := c.CategoryDb.Create(in.Name, in.Description)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,5 @@ func (c *CategoryService) Create(ctx context.Context, in *pb.CreateCategoryReque
 		Description: category.Description,
 	}
 
-	return &pb.CategoryResponse{
-		Category: categoryResponse,
-	}, nil
+	return categoryResponse, nil
 }
