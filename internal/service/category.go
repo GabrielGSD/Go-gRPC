@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"io"
 
 	"github.com/GabrielGSD/Go-gRPC/internal/database"
 	"github.com/GabrielGSD/Go-gRPC/internal/pb"
@@ -71,4 +72,56 @@ func (c *CategoryService) Get(ctx context.Context, in *pb.CategoryGetRequest) (*
 	}
 
 	return categoryResponse, nil
+}
+
+func (c *CategoryService) CreateStream(stream pb.CategoryService_CreateStreamServer) error {
+	categories := &pb.CategoryList{}
+
+	for {
+		category, err := stream.Recv()
+		// io.EOF -> chegou no final do stream e não tem mais dados para mandar
+		if err == io.EOF {
+			return stream.SendAndClose(categories)
+		}
+		if err != nil {
+			return err
+		}
+
+		categoryResult, err := c.CategoryDb.Create(category.Name, category.Description)
+		if err != nil {
+			return err
+		}
+
+		categories.Categories = append(categories.Categories, &pb.Category{
+			Id:          categoryResult.ID,
+			Name:        categoryResult.Name,
+			Description: categoryResult.Description,
+		})
+	}
+}
+
+func (c *CategoryService) CreateStreamBidirectional(stream pb.CategoryService_CreateStreamBidirectionalServer) error {
+	for {
+		category, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		categoryResult, err := c.CategoryDb.Create(category.Name, category.Description)
+		if err != nil {
+			return err
+		}
+
+		err = stream.Send(&pb.Category{
+			Id:          categoryResult.ID,
+			Name:        categoryResult.Name,
+			Description: categoryResult.Description,
+		})
+		if err != nil {
+			return err
+		}
+	}
 }
